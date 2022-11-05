@@ -61,6 +61,10 @@ void DefineExamplesManipulationStation(py::module m) {
             py::arg("collision_model") = IiwaCollisionModel::kNoCollision,
             py::arg("schunk_model") = SchunkCollisionModel::kBox,
             cls_doc.SetupClutterClearingStation.doc)
+        .def("SetupNutStation", &Class::SetupNutStation,
+            py::arg("collision_model") = IiwaCollisionModel::kNoCollision,
+            py::arg("schunk_model") = SchunkCollisionModel::kBox,
+            cls_doc.SetupNutStation.doc)
         .def("SetupPlanarIiwaStation", &Class::SetupPlanarIiwaStation,
             py::arg("schunk_model") = SchunkCollisionModel::kBox,
             cls_doc.SetupPlanarIiwaStation.doc)

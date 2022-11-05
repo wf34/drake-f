@@ -288,6 +288,27 @@ void ManipulationStation<T>::AddManipulandFromFile(
 }
 
 template <typename T>
+void ManipulationStation<T>::SetupNutStation(
+      IiwaCollisionModel collision_model, SchunkCollisionModel schunk_model) {
+  DRAKE_DEMAND(setup_ == Setup::kNone);
+  setup_ = Setup::kClutterClearing;
+
+  // Add bolt n nut
+  {
+    const std::string sdf_path = FindResourceOrThrow(
+        "drake/examples/manipulation_station/models/bolt_n_nut.sdf");
+
+    RigidTransform<double> X_WC(RotationMatrix<double>::Identity(),
+                                Vector3d(0.0, -0.3, 0.1));
+    bolt_n_nut_instance_ = internal::AddAndWeldModelFrom(sdf_path, "nut_and_bolt", plant_->world_frame(),
+                                  "bolt", X_WC, plant_);
+  }
+
+  AddDefaultIiwa(collision_model);
+  AddDefaultWsg(schunk_model);
+}
+
+template <typename T>
 void ManipulationStation<T>::SetupClutterClearingStation(
     const std::optional<const math::RigidTransform<double>>& X_WCameraBody,
     IiwaCollisionModel collision_model, SchunkCollisionModel schunk_model) {
@@ -346,6 +367,19 @@ void ManipulationStation<T>::SetupManipulationClassStation(
     internal::AddAndWeldModelFrom(sdf_path, "table", plant_->world_frame(),
                                   "amazon_table", X_WT, plant_);
   }
+
+  // Add bolt n nut
+  {
+    const std::string sdf_path = FindResourceOrThrow(
+        "drake/examples/manipulation_station/models/bolt_n_nut.sdf");
+
+    RigidTransform<double> X_WC(RotationMatrix<double>::Identity(),
+                                Vector3d(0.0, -0.3, 0.1));
+    bolt_n_nut_instance_ = internal::AddAndWeldModelFrom(sdf_path, "nut_and_bolt", plant_->world_frame(),
+                                  "bolt", X_WC, plant_);
+
+  }
+
 
   // Add the cupboard.
   {
@@ -535,6 +569,7 @@ void ManipulationStation<T>::Finalize(
         render_engines) {
   DRAKE_THROW_UNLESS(iiwa_model_.model_instance.is_valid());
   DRAKE_THROW_UNLESS(wsg_model_.model_instance.is_valid());
+  DRAKE_THROW_UNLESS(bolt_n_nut_instance_.is_valid());
 
   MakeIiwaControllerModel();
 
@@ -814,6 +849,9 @@ void ManipulationStation<T>::Finalize(
       builder.ExportOutput(depth_to_cloud->point_cloud_output_port(),
                            camera_name + "_point_cloud");
     }
+      auto zero_torque = builder.template AddSystem<systems::ConstantVectorSource<double>>(Eigen::VectorXd::Zero(1));
+      builder.Connect(zero_torque->get_output_port(),
+                      plant_->get_actuation_input_port(bolt_n_nut_instance_));
   }
 
   builder.ExportOutput(scene_graph_->get_query_output_port(), "query_object");
